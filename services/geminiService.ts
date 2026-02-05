@@ -3,7 +3,13 @@ import { GoogleGenAI } from "@google/genai";
 
 export const generateImageDescription = async (base64Image: string): Promise<string> => {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+    const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
+    if (!apiKey) {
+      console.warn("API Key not found, skipping AI description.");
+      return "A shared image via SnapHost.";
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
     
     // Strip the data:image/jpeg;base64, part if present
     const base64Data = base64Image.split(',')[1] || base64Image;

@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, useNavigate, useParams, Link } from 'react-router-dom';
 import { Camera, Upload, Share2, Image as ImageIcon, Copy, Check, Info, Trash2, ArrowLeft } from 'lucide-react';
-import { compressImage, encodeShareLink, decodeShareLink, formatBytes } from './utils/imageUtils';
-import { generateImageDescription } from './services/geminiService';
-import { UploadedImage, ShareData } from './types';
+import { compressImage, encodeShareLink, decodeShareLink, formatBytes } from './utils/imageUtils.ts';
+import { generateImageDescription } from './services/geminiService.ts';
+import { UploadedImage, ShareData } from './types.ts';
 
 // --- Shared Components ---
 

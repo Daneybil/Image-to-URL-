@@ -1,5 +1,5 @@
 
-import { ShareData } from '../types';
+import { ShareData } from '../types.ts';
 
 /**
  * Compresses an image to fit within URL limits (roughly targeting < 100kb for high compatibility)
