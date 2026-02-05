@@ -1,0 +1,7 @@
+{
+  "name": "SnapHost - Instant Image Sharing",
+  "description": "A high-performance React application to upload, compress, and share images via permanent data-encoded URLs. Features AI-powered descriptions using Gemini.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
