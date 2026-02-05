@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, useNavigate, useParams, Link } from 'react-router-dom';
-import { Camera, Upload, Share2, Image as ImageIcon, Copy, Check, Info, Trash2, ArrowLeft } from 'lucide-react';
+import { Camera, Upload, Share2, Image as ImageIcon, Copy, Check, Info, Trash2, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { compressImage, encodeShareLink, decodeShareLink, formatBytes } from './utils/imageUtils.ts';
 import { generateImageDescription } from './services/geminiService.ts';
 import { UploadedImage, ShareData } from './types.ts';
@@ -16,6 +16,7 @@ const Navbar: React.FC = () => (
         SnapHost
       </Link>
       <div className="flex gap-4 items-center">
+        <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded border border-slate-700 font-mono hidden md:inline">BY DANEYBIL BTC</span>
         <Link to="/about" className="text-sm text-slate-400 hover:text-white transition-colors">How it works</Link>
       </div>
     </div>
@@ -40,10 +41,10 @@ const Home: React.FC = () => {
 
     setIsUploading(true);
     try {
-      // 1. Compress image for URL viability
-      const compressedDataUrl = await compressImage(file);
+      // 1. Compress image for URL viability (targeted smaller for stability)
+      const compressedDataUrl = await compressImage(file, 600, 0.5);
       
-      // 2. Optional: Generate AI description with Gemini
+      // 2. Generate AI description
       const description = await generateImageDescription(compressedDataUrl);
 
       const newImage: UploadedImage = {
@@ -52,14 +53,13 @@ const Home: React.FC = () => {
         name: file.name,
         timestamp: Date.now(),
         aiDescription: description,
-        size: Math.round((compressedDataUrl.length * 3) / 4) // Approx size in bytes
+        size: Math.round((compressedDataUrl.length * 3) / 4)
       };
 
-      const updatedHistory = [newImage, ...history].slice(0, 10); // Keep last 10
+      const updatedHistory = [newImage, ...history].slice(0, 10);
       setHistory(updatedHistory);
       localStorage.setItem('snaphost_history', JSON.stringify(updatedHistory));
 
-      // 3. Prepare share data and navigate to detail view
       const shareData: ShareData = {
         v: '1',
         d: newImage.dataUrl,
@@ -67,10 +67,11 @@ const Home: React.FC = () => {
         a: newImage.aiDescription
       };
       const hash = encodeShareLink(shareData);
-      navigate(`/v/${hash}`);
+      // Link now ends with .png for better platform support
+      navigate(`/v/${hash}/share.png`);
     } catch (err) {
       console.error(err);
-      alert("Failed to process image. Make sure it's a valid image file.");
+      alert("Failed to process image. Try a smaller file.");
     } finally {
       setIsUploading(false);
     }
@@ -87,10 +88,10 @@ const Home: React.FC = () => {
     <div className="pt-24 pb-12 px-4 max-w-4xl mx-auto">
       <div className="text-center mb-12">
         <h1 className="text-4xl md:text-6xl font-extrabold mb-4">
-          Instant Image <span className="text-blue-500">Hosting</span>
+          Permanent <span className="text-blue-500">Image</span> URL
         </h1>
         <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-          Upload an image and get a permanent, sharable link instantly. No accounts, no database, just pure data.
+          Host images directly in your browser. Encoded by <b>DANEYBIL BTC</b> for maximum stability.
         </p>
       </div>
 
@@ -101,19 +102,20 @@ const Home: React.FC = () => {
           transition-all duration-300
           ${isUploading ? 'bg-slate-800 border-emerald-500 animate-pulse' : 'bg-slate-800/50 border-slate-700 hover:border-blue-500 hover:bg-slate-800'}
         `}>
-          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+          <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
             {isUploading ? (
               <>
                 <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-lg font-medium text-emerald-400">Optimizing & Encoding...</p>
+                <p className="text-lg font-medium text-emerald-400">Optimizing for sharing...</p>
+                <p className="text-xs text-slate-500 mt-1">Ensuring link survives messaging apps</p>
               </>
             ) : (
               <>
                 <div className="p-4 bg-blue-500/10 rounded-full mb-4 group-hover:scale-110 transition-transform">
                   <Upload className="w-10 h-10 text-blue-500" />
                 </div>
-                <p className="mb-2 text-xl font-semibold text-slate-200">Click to upload or drag & drop</p>
-                <p className="text-sm text-slate-400">PNG, JPG, WEBP (Max 10MB)</p>
+                <p className="mb-2 text-xl font-semibold text-slate-200">Select Image to Host</p>
+                <p className="text-sm text-slate-400">Links are encoded to never expire.</p>
               </>
             )}
           </div>
@@ -132,33 +134,33 @@ const Home: React.FC = () => {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold flex items-center gap-2">
               <ImageIcon className="text-emerald-400" size={24} />
-              Recent Uploads
+              Stored Links
             </h2>
             <button 
               onClick={clearHistory}
               className="text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1 text-sm"
             >
-              <Trash2 size={16} /> Clear
+              <Trash2 size={16} /> Clear All
             </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {history.map((img) => (
-              <div key={img.id} className="glass-effect p-4 rounded-xl flex items-center gap-4 group">
+              <div key={img.id} className="glass-effect p-4 rounded-xl flex items-center gap-4 group hover:border-blue-500/50 transition-colors">
                 <div className="w-20 h-20 rounded-lg overflow-hidden bg-slate-900 flex-shrink-0">
                   <img src={img.dataUrl} alt={img.name} className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-slate-200 truncate">{img.name}</p>
-                  <p className="text-xs text-slate-500 mt-1">{formatBytes(img.size)} • {new Date(img.timestamp).toLocaleDateString()}</p>
+                  <p className="text-xs text-slate-500 mt-1">{formatBytes(img.size)} • Hosted</p>
                   <button 
                     onClick={() => {
                        const shareData: ShareData = { v: '1', d: img.dataUrl, n: img.name, a: img.aiDescription };
                        const hash = encodeShareLink(shareData);
-                       navigate(`/v/${hash}`);
+                       navigate(`/v/${hash}/share.png`);
                     }}
                     className="mt-2 text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
                   >
-                    View & Share <Share2 size={12} />
+                    Get URL <Share2 size={12} />
                   </button>
                 </div>
               </div>
@@ -174,12 +176,17 @@ const Viewer: React.FC = () => {
   const { hash } = useParams<{ hash: string }>();
   const [data, setData] = useState<ShareData | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isUrlLarge, setIsUrlLarge] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     if (hash) {
       const decoded = decodeShareLink(hash);
       setData(decoded);
+      // Check if URL is dangerously long for some sharing platforms (approx 4k-8k chars)
+      if (hash.length > 4000) {
+        setIsUrlLarge(true);
+      }
     }
   }, [hash]);
 
@@ -192,10 +199,12 @@ const Viewer: React.FC = () => {
   if (!data) {
     return (
       <div className="pt-32 px-4 text-center">
-        <h2 className="text-2xl font-bold text-red-400 mb-4">Link Expired or Invalid</h2>
-        <p className="text-slate-400 mb-8">The image data could not be recovered from this URL.</p>
+        <h2 className="text-2xl font-bold text-red-400 mb-4">URL Truncated or Invalid</h2>
+        <p className="text-slate-400 mb-8 max-w-md mx-auto">
+          This usually happens if the link was shortened or cut off by a messaging app. Try uploading again with a smaller file.
+        </p>
         <Link to="/" className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl transition-colors">
-          <ArrowLeft size={18} /> Back to Upload
+          <ArrowLeft size={18} /> New Upload
         </Link>
       </div>
     );
@@ -206,7 +215,7 @@ const Viewer: React.FC = () => {
       <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <button onClick={() => navigate('/')} className="text-slate-400 hover:text-white flex items-center gap-1 mb-2 text-sm transition-colors">
-            <ArrowLeft size={16} /> Upload New
+            <ArrowLeft size={16} /> Host Another
           </button>
           <h1 className="text-2xl font-bold truncate max-w-md">{data.n}</h1>
           {data.a && <p className="text-slate-400 italic text-sm mt-1">"{data.a}"</p>}
@@ -217,10 +226,17 @@ const Viewer: React.FC = () => {
             className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-xl transition-all active:scale-95"
           >
             {copied ? <Check size={18} /> : <Copy size={18} />}
-            {copied ? 'Copied!' : 'Copy Share Link'}
+            {copied ? 'Copied Link!' : 'Copy Permanent URL'}
           </button>
         </div>
       </div>
+
+      {isUrlLarge && (
+        <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/50 rounded-xl flex gap-3 text-amber-200 text-sm">
+          <AlertTriangle className="flex-shrink-0" />
+          <p>This URL is quite long. If sharing via WhatsApp or SMS, the link might get cut off. For best results, use "Host Another" and choose a smaller image.</p>
+        </div>
+      )}
 
       <div className="glass-effect p-2 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-500">
         <img 
@@ -233,18 +249,18 @@ const Viewer: React.FC = () => {
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="glass-effect p-6 rounded-2xl">
           <h3 className="text-lg font-bold mb-3 flex items-center gap-2 text-blue-400">
-            <Info size={20} /> How is this permanent?
+            <Info size={20} /> Developer Note
           </h3>
           <p className="text-slate-400 text-sm leading-relaxed">
-            SnapHost uses <b>Data URI Encoding</b>. Instead of uploading your image to a central server, the entire image data is embedded directly into the URL itself. This means the link <i>is</i> the image. As long as the link exists, the image is accessible forever.
+            This technology by <b>DANEYBIL BTC</b> ensures your data is stored within the link itself. There is no database to crash and no server to expire your content. It is truly permanent.
           </p>
         </div>
         <div className="glass-effect p-6 rounded-2xl">
           <h3 className="text-lg font-bold mb-3 flex items-center gap-2 text-emerald-400">
-            <ImageIcon size={20} /> AI Enhanced
+            <ImageIcon size={20} /> Permanent Link
           </h3>
           <p className="text-slate-400 text-sm leading-relaxed">
-            Every image uploaded is processed by <b>Google Gemini 3</b> to generate a meaningful context and smart ALT tags, making your shared links more descriptive and accessible for social media previews.
+            The URL ends in <b>.png</b> to ensure compatibility with all platforms. Share it anywhere—as long as the full link is used, the image will load.
           </p>
         </div>
       </div>
@@ -254,22 +270,21 @@ const Viewer: React.FC = () => {
 
 const About: React.FC = () => (
   <div className="pt-32 px-4 max-w-2xl mx-auto">
-    <h1 className="text-3xl font-bold mb-6">About SnapHost</h1>
+    <h1 className="text-3xl font-bold mb-6">SnapHost Stability</h1>
     <div className="space-y-6 text-slate-300 leading-relaxed">
       <p>
-        SnapHost is a "Serverless" image hosting platform. Traditional platforms store your images on a database and give you a short ID. If their servers go down, your links break.
+        Engineered by <b>DANEYBIL BTC</b>, SnapHost is a serverless image hosting solution. We solve the problem of broken links by encoding image data directly into the URL hash.
       </p>
       <p>
-        We take a different approach: <b>The URL contains the image.</b>
+        When you upload an image, we use advanced client-side compression to turn your image into a "Data Stream". This stream is what you see in the URL.
       </p>
       <ul className="list-disc pl-5 space-y-3 text-slate-400">
-        <li><b>Privacy Focused:</b> Your images are never stored on our servers. They live in your browser and in the links you share.</li>
-        <li><b>Permanent:</b> No expiry dates. No account needed.</li>
-        <li><b>Compressed:</b> We use advanced canvas optimization to shrink images while maintaining visual quality, ensuring links stay within browser length limits.</li>
-        <li><b>AI Integrated:</b> Gemini analyzes your image to provide metadata and accessibility descriptions.</li>
+        <li><b>No Expiration:</b> Links exist as long as the internet exists.</li>
+        <li><b>Pure Privacy:</b> Your photos never touch a hard drive.</li>
+        <li><b>Social Ready:</b> Links end in .png for better previews.</li>
       </ul>
       <div className="pt-8">
-        <Link to="/" className="text-blue-400 font-bold hover:underline">Start Uploading →</Link>
+        <Link to="/" className="text-blue-400 font-bold hover:underline">Return to Home →</Link>
       </div>
     </div>
   </div>
@@ -285,6 +300,8 @@ const App: React.FC = () => {
         <main>
           <Routes>
             <Route path="/" element={<Home />} />
+            {/* Added optional filename parameter for .png display */}
+            <Route path="/v/:hash/:filename" element={<Viewer />} />
             <Route path="/v/:hash" element={<Viewer />} />
             <Route path="/about" element={<About />} />
           </Routes>
@@ -292,7 +309,10 @@ const App: React.FC = () => {
         
         <footer className="py-12 px-4 text-center border-t border-slate-900 mt-20">
           <p className="text-slate-500 text-sm">
-            Powered by Gemini AI & Client-Side Encoding. No backend. No tracking.
+            Developed & Optimized by <b>DANEYBIL BTC</b>
+          </p>
+          <p className="text-slate-600 text-[10px] mt-2">
+            Gemini AI Powered • Data URI Encoding • 100% Client-Side
           </p>
         </footer>
       </div>
